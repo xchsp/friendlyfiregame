@@ -1,0 +1,127 @@
+name: Build Game
+on:
+  push:
+    branches:
+    - '**'
+    - '!gh-pages'
+    tags:
+    - 'v*.*.*'
+  pull_request:
+    branches:
+    - master
+    types:
+    - opened
+    - synchronize
+    - reopened
+jobs:
+
+  build_webapp:
+    name: Build Webapp
+    runs-on: ubuntu-20.04
+    steps:
+    - name: git checkout
+      uses: actions/checkout@v2
+    - uses: jwalton/gh-find-current-pr@v1
+      id: pr
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Read version from package.json
+      id: version
+      uses: notiz-dev/github-action-json-property@v0.1.0
+      with:
+        path: 'package.json'
+        prop_path: 'version'
+    - name: Extract branch name
+      if: github.event_name != 'pull_request'
+      shell: bash
+      run: echo "::set-env name=GIT_BRANCH_NAME::$(echo ${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}})"
+      id: extract_branch
+    - name: Setup Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    - name: Cache node modules
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-node-modules
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+    - run: npm install
+    - run: npm run compile
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@v1.4
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        GITHUB_PULL_REQUEST_ID: ${{ steps.pr.outputs.pr }}
+      with:
+        args: >
+          -Dsonar.projectVersion=${{steps.version.outputs.prop}}
+          -Dsonar.branch.name=${GIT_BRANCH_NAME}
+          -Dsonar.pullrequest.key=${GITHUB_PULL_REQUEST_ID}
+          -Dsonar.pullrequest.branch=${GITHUB_HEAD_REF}
+          -Dsonar.pullrequest.base=${GITHUB_BASE_REF}
+    - run: npm run dist
+    - name: Archive dist folder
+      uses: actions/upload-artifact@v1
+      with:
+        name: webapp-dist
+        path: dist
+
+  deploy_webapp:
+    name: Deploy Webapp
+    needs: build_webapp
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Download archived dist folder
+      uses: actions/download-artifact@master
+      with:
+        name: webapp-dist
+        path: dist
+
+    - name: Publish browser game
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_branch: gh-pages
+        publish_dir: ./dist
+        force_orphan: true
+        cname: play.friendlyfiregame.com
+
+  build_electron_app:
+    needs: build_webapp
+    name: Build Electron Apps
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+        - ubuntu-20.04
+        - macos-10.15
+        - windows-2019
+    steps:
+    - name: git checkout
+      uses: actions/checkout@v2
+    - name: Setup Node.js
+      uses: actions/setup-node@v1
+      with:
+        node-version: '14.x'
+    - name: Cache node modules
+      uses: actions/cache@v2
+      env:
+        cache-name: cache-node-modules
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.cache-name }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+    - run: npm install
+    - run: npm run compile
+    - run: npm run package

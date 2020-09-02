@@ -1,17 +1,17 @@
-import { entity } from "./Entity";
-import { Face, EyeType } from './Face';
-import { NPC } from './NPC';
-import { Environment } from "./World";
-import { now } from "./util";
-import { Sound } from './Sound';
-import { Wood } from "./Wood";
-import { Aseprite } from "./Aseprite";
-import { asset } from "./Assets";
-import { GameScene } from "./scenes/GameScene";
+import { Aseprite } from './Aseprite';
+import { asset } from './Assets';
 import { Conversation } from './Conversation';
-import { QuestATrigger, QuestKey } from './Quests';
+import { entity } from './Entity';
+import { Environment } from './World';
+import { EyeType, Face } from './Face';
 import { GameObjectInfo } from './MapInfo';
+import { GameScene } from './scenes/GameScene';
+import { now } from './util';
+import { NPC } from './NPC';
+import { QuestATrigger, QuestKey } from './Quests';
 import { RenderingLayer } from './Renderer';
+import { Sound } from './Sound';
+import { Wood } from './Wood';
 
 export enum SeedState {
     FREE = 0,
@@ -38,7 +38,11 @@ export class Seed extends NPC {
         this.face = new Face(scene, this, EyeType.STANDARD, 0, 8);
 
         const floatingPosition = this.scene.pointsOfInterest.find(poi => poi.name === 'recover_floating_position');
-        if (!floatingPosition) throw new Error ('Could not find "recover_floating_position" point of interest in game scene');
+
+        if (!floatingPosition) {
+            throw new Error ('Could not find “recover_floating_position” point of interest in game scene.');
+        }
+
         this.floatingPosition = floatingPosition;
     }
 
@@ -53,13 +57,23 @@ export class Seed extends NPC {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        this.scene.renderer.addAseprite(Seed.sprite, this.getSpriteTag(), this.x, this.y - 1, RenderingLayer.ENTITIES, undefined)
+    public draw(ctx: CanvasRenderingContext2D): void {
+        this.scene.renderer.addAseprite(
+            Seed.sprite,
+            this.getSpriteTag(),
+            this.x, this.y - 1,
+            RenderingLayer.ENTITIES,
+            undefined
+        );
 
-        if (this.scene.showBounds) this.drawBounds();
+        if (this.scene.showBounds) {
+            this.drawBounds();
+        }
+
         if (this.state === SeedState.GROWN) {
             this.drawFace(ctx);
         }
+
         this.speechBubble.draw(ctx);
     }
 
@@ -77,32 +91,45 @@ export class Seed extends NPC {
         }
     }
 
-    update(dt: number): void {
+    public update(dt: number): void {
         super.update(dt);
+
         if (this.state === SeedState.SWIMMING) {
             const diffX = this.floatingPosition.x - this.x;
             const moveX = Math.min(20, Math.abs(diffX)) * Math.sign(diffX);
             this.x += moveX * dt;
             this.setVelocityY(Math.abs(((now() % 2000) - 1000) / 1000) - 0.5);
         }
+
         if (this.state === SeedState.FREE || this.state === SeedState.SWIMMING) {
             const player = this.scene.player;
+
             if (!this.isCarried() && this.distanceTo(player) < 20) {
                 player.carry(this);
             }
-            if (!this.isCarried() && this.scene.world.collidesWith(this.x, this.y - 8) === Environment.SOIL) {
+            if (
+                !this.isCarried()
+                && this.scene.world.collidesWith(this.x, this.y - 8) === Environment.SOIL
+            ) {
                 const seedPosition = this.scene.pointsOfInterest.find(poi => poi.name === 'seedposition');
-                if (!seedPosition) throw new Error('Seed Position is missing in Points of Interest Array');
+
+                if (!seedPosition) throw new Error('Seed position is missing in points of interest array');
 
                 this.state = SeedState.PLANTED;
                 this.scene.game.campaign.getQuest(QuestKey.A).trigger(QuestATrigger.PLANTED_SEED);
                 this.setFloating(true);
                 this.x = seedPosition.x;
                 this.y = seedPosition.y;
+
                 Seed.successSound.play();
                 Conversation.setGlobal("seedplanted", "true");
             }
-            if (!this.isCarried() && this.state !== SeedState.SWIMMING && this.scene.world.collidesWith(this.x, this.y - 5) === Environment.WATER) {
+
+            if (
+                !this.isCarried()
+                && this.state !== SeedState.SWIMMING
+                && this.scene.world.collidesWith(this.x, this.y - 5) === Environment.WATER
+            ) {
                 this.state = SeedState.SWIMMING;
                 this.setVelocity(0, 0);
                 this.setFloating(true);
@@ -115,6 +142,7 @@ export class Seed extends NPC {
         } else if (this.state === SeedState.GROWN) {
             // TODO Special update behavior when grown
         }
+
         this.speechBubble.update(this.x, this.y);
     }
 
@@ -125,9 +153,9 @@ export class Seed extends NPC {
         this.wood.x = this.x;
         this.wood.y = this.y + this.height / 2;
         this.wood.setVelocity(-5, 0);
+
         return this.wood;
     }
 
-    startDialog(): void {
-    }
+    public startDialog(): void {}
 }

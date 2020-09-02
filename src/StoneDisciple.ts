@@ -1,10 +1,10 @@
-import { NPC } from './NPC';
-import { entity } from "./Entity";
-import { Aseprite } from "./Aseprite";
-import { asset } from "./Assets";
-import { GameScene } from "./scenes/GameScene";
+import { Aseprite } from './Aseprite';
+import { asset } from './Assets';
 import { Conversation } from './Conversation';
-import { Face, EyeType } from './Face';
+import { entity } from './Entity';
+import { EyeType, Face } from './Face';
+import { GameScene } from './scenes/GameScene';
+import { NPC } from './NPC';
 import { RenderingLayer } from './Renderer';
 
 @entity("stonedisciple")
@@ -19,29 +19,42 @@ export class StoneDisciple extends NPC {
         this.face = new Face(scene, this, EyeType.STONEDISCIPLE, 0, 0);
     }
 
-    protected showDialoguePrompt (): boolean {
-        if (!super.showDialoguePrompt()) return false;
+    protected showDialoguePrompt(): boolean {
+        if (!super.showDialoguePrompt()) {
+            return false;
+        }
+
         const talkedToStoneDisciple = Conversation.getGlobals()['$talkedToStoneDisciple'];
         const talkedToStoneDiscipleAgain = Conversation.getGlobals()['$talkedToStoneDiscipleAgain'];
         const gotTeleported = Conversation.getGlobals()['$gotTeleported'];
+
         return (
-            talkedToStoneDisciple === undefined ||
-            (gotTeleported !== undefined && talkedToStoneDiscipleAgain === undefined)
+            talkedToStoneDisciple === undefined
+            || (gotTeleported !== undefined && talkedToStoneDiscipleAgain === undefined)
         );
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        this.scene.renderer.addAseprite(StoneDisciple.sprite, "idle", this.x, this.y, RenderingLayer.ENTITIES, this.direction);
+    public draw(ctx: CanvasRenderingContext2D): void {
+        this.scene.renderer.addAseprite(
+            StoneDisciple.sprite, "idle", this.x, this.y, RenderingLayer.ENTITIES, this.direction
+        );
+
         this.drawFace(ctx, false);
-        if (this.scene.showBounds) this.drawBounds();
-        if (this.showDialoguePrompt()) {
-            this.drawDialoguePrompt(ctx);
+
+        if (this.scene.showBounds) {
+            this.drawBounds();
         }
+
+        if (this.showDialoguePrompt()) {
+            this.drawDialoguePrompt();
+        }
+
         this.speechBubble.draw(ctx);
     }
 
-    update(dt: number): void {
+    public update(dt: number): void {
         super.update(dt);
+
         this.dialoguePrompt.update(dt, this.x, this.y + this.height);
         this.speechBubble.update(this.x, this.y);
     }

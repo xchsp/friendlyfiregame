@@ -1,17 +1,17 @@
-import { Scene } from "../Scene";
-import { FriendlyFire } from "../FriendlyFire";
-import { SlideTransition } from "../transitions/SlideTransition";
-import { easeOutBounce } from "../easings";
-import { BitmapFont } from "../BitmapFont";
-import { asset } from "../Assets";
-import { MenuList, MenuItem } from '../Menu';
-import { ControlsScene } from './ControlsScene';
-import { TitleScene } from "./TitleScene";
-import { ControllerEvent } from "../input/ControllerEvent";
 import { AppInfoJSON } from 'appinfo.json';
+import { asset } from '../Assets';
+import { BitmapFont } from '../BitmapFont';
+import { ControllerEvent } from '../input/ControllerEvent';
+import { ControlsScene } from './ControlsScene';
+import { DIALOG_FONT } from '../constants';
+import { easeOutBounce } from '../easings';
+import { FriendlyFire } from '../FriendlyFire';
 import { isDev } from '../util';
+import { MenuItem, MenuList } from '../Menu';
+import { Scene } from '../Scene';
+import { SlideTransition } from '../transitions/SlideTransition';
 import { Sound } from '../Sound';
-import { DIALOG_FONT } from "../constants";
+import { TitleScene } from './TitleScene';
 
 enum MenuItemKey {
     RESUME = 'resume',
@@ -59,7 +59,7 @@ export class PauseScene extends Scene<FriendlyFire> {
         this.menu.onActivated.disconnect(this.handleMenuAction, this);
     }
 
-    public async handleMenuAction (buttonId: string): Promise<void> {
+    public async handleMenuAction(buttonId: string): Promise<void> {
         switch(buttonId) {
             case MenuItemKey.RESUME:
                 PauseScene.music.stop();
@@ -94,11 +94,24 @@ export class PauseScene extends Scene<FriendlyFire> {
         ctx.globalAlpha = 0.8;
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, width, height);
+
         PauseScene.headlineFont.drawText(ctx, 'GAME PAUSED', 75, 100, "white");
+
         const versionText = isDev() ? "DEVELOPMENT VERSION" : PauseScene.appInfo.version;
         const versionTextSize = PauseScene.font.measureText(versionText);
-        PauseScene.font.drawText(ctx, versionText, this.game.width - versionTextSize.width - 4, this.game.height - versionTextSize.height - 4, "white", 0, 0.6);
+
+        PauseScene.font.drawText(
+            ctx,
+            versionText,
+            this.game.width - versionTextSize.width - 7,
+            this.game.height - versionTextSize.height - 4,
+            "white",
+            0,
+            0.6
+        );
+
         ctx.restore();
+
         this.menu.draw(ctx);
     }
 }

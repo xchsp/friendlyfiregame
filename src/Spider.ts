@@ -1,9 +1,9 @@
-import { NPC } from './NPC';
-import { entity } from "./Entity";
-import { Aseprite } from "./Aseprite";
-import { asset } from "./Assets";
+import { Aseprite } from './Aseprite';
+import { asset } from './Assets';
 import { Conversation } from './Conversation';
-import { GameScene } from "./scenes/GameScene";
+import { entity } from './Entity';
+import { GameScene } from './scenes/GameScene';
+import { NPC } from './NPC';
 import { RenderingLayer, RenderingType } from './Renderer';
 
 interface SpiderSpriteMetadata {
@@ -12,7 +12,6 @@ interface SpiderSpriteMetadata {
 
 @entity("spider")
 export class Spider extends NPC {
-
     @asset("sprites/magicspider.aseprite.json")
     private static sprite: Aseprite;
 
@@ -27,8 +26,11 @@ export class Spider extends NPC {
         Conversation.setGlobal("talkedToSpider", "false");
     }
 
-    public showDialoguePrompt (): boolean {
-        if (!super.showDialoguePrompt()) return false;
+    public showDialoguePrompt(): boolean {
+        if (!super.showDialoguePrompt()) {
+            return false;
+        }
+
         return Conversation.getGlobals()["$talkedToSpider"] === "false";
     }
 
@@ -37,15 +39,19 @@ export class Spider extends NPC {
             const metadata = Spider.sprite.getLayer("Meta")?.data;
             this.spriteMetadata = metadata ? JSON.parse(metadata) : {};
         }
+
         return this.spriteMetadata || {};
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        this.scene.renderer.addAseprite(Spider.sprite, "idle", this.x, this.y, RenderingLayer.ENTITIES, this.direction);
+    public draw(ctx: CanvasRenderingContext2D): void {
+        this.scene.renderer.addAseprite(
+            Spider.sprite, "idle", this.x, this.y, RenderingLayer.ENTITIES, this.direction
+        );
 
         const scale = (this.direction < 0) ? { x: -1, y: 1 } : undefined;
         const totalOffsetY = -10 - this.eyeOffsetY;
         const totalOffsetX = 5;
+
         this.scene.renderer.add({
             type: RenderingType.ASEPRITE,
             layer: RenderingLayer.ENTITIES,
@@ -66,12 +72,13 @@ export class Spider extends NPC {
         if (this.scene.showBounds) this.drawBounds();
 
         if (this.showDialoguePrompt()) {
-            this.drawDialoguePrompt(ctx);
+            this.drawDialoguePrompt();
         }
+
         this.speechBubble.draw(ctx);
     }
 
-    update(dt: number): void {
+    public update(dt: number): void {
         super.update(dt);
 
         // Get y offset to match breathing motion

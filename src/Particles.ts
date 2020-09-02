@@ -1,7 +1,7 @@
-import { GRAVITY } from './constants';
-import { Vector2 } from './util';
 import { GameScene } from './scenes/GameScene';
-import { RenderingType, RenderingLayer } from './Renderer';
+import { GRAVITY } from './constants';
+import { RenderingLayer, RenderingType } from './Renderer';
+import { Vector2 } from './util';
 
 type ParticleAppearance = string | HTMLImageElement | HTMLCanvasElement;
 
@@ -26,6 +26,8 @@ export interface ParticleEmitterArguments {
     sizeCurve?: ValueCurve;
     angle?: number | NumberGenerator;
     angleSpeed?: number | NumberGenerator;
+    renderingLayer?: RenderingLayer;
+    zIndex?: number;
     update?: (p: Particle) => void
 };
 
@@ -34,20 +36,21 @@ export class Particles {
     private emitters: ParticleEmitter[] = [];
 
     public constructor(scene: GameScene) {
-        this.scene = scene;    
+        this.scene = scene;
     }
 
     public update(dt: number): void {
         this.emitters.forEach(emitter => emitter.update(dt));
     }
 
-    public addEmittersToRenderingQueue (): void {
+    public addEmittersToRenderingQueue(): void {
         this.emitters.forEach(emitter => {
             this.scene.renderer.add({
                 type: RenderingType.PARTICLE_EMITTER,
-                layer: RenderingLayer.PARTICLES,
+                layer: emitter.renderingLayer,
+                zIndex: emitter.zIndex,
                 emitter
-            })
+            });
         });
     }
 
@@ -60,19 +63,21 @@ export class Particles {
 
     public dropEmitter(emitter: ParticleEmitter): boolean {
         const index = this.emitters.indexOf(emitter);
+
         if (index >= 0) {
             this.emitters.splice(index, 1);
             return true;
         }
+
         return false;
     }
 
     public createEmitter(args: ParticleEmitterArguments) {
         const emitter = new ParticleEmitter(args);
         this.addEmitter(emitter);
+
         return emitter;
     }
-
 }
 
 export class ParticleEmitter {
@@ -93,6 +98,8 @@ export class ParticleEmitter {
     private blendMode: string;
     public alphaCurve: ValueCurve;
     public sizeCurve: ValueCurve;
+    public renderingLayer: RenderingLayer;
+    public zIndex: number;
     private updateMethod: ((p: Particle) => void) | undefined;
 
     constructor(args: ParticleEmitterArguments) {
@@ -113,6 +120,8 @@ export class ParticleEmitter {
         this.blendMode = args.blendMode || "source-over";
         this.alphaCurve = args.alphaCurve || valueCurves.constant;
         this.sizeCurve = args.sizeCurve || valueCurves.constant;
+        this.renderingLayer = args.renderingLayer || RenderingLayer.PARTICLES;
+        this.zIndex = args.zIndex !== undefined ? args.zIndex : 0;
         this.updateMethod = args.update;
 
         function toGenerator<tp>(obj: tp | (() => tp)): (() => tp) {
@@ -129,7 +138,7 @@ export class ParticleEmitter {
         this.y = y;
     }
 
-    public clear() {
+    public clear(): void {
         this.particles = [];
     }
 
@@ -142,6 +151,7 @@ export class ParticleEmitter {
     public emitSingle(): Particle {
         const v = this.velocityGenerator();
         const off = this.offsetGenerator();
+
         const particle = new Particle(
             this,
             this.x + off.x,
@@ -155,17 +165,21 @@ export class ParticleEmitter {
             this.lifetimeGenerator(),
             this.alphaGenerator()
         );
+
         this.particles.push(particle);
+
         return particle;
     }
 
     public update(dt: number): void {
         this.gravity = this.gravityGenerator();
+
         for (let i = this.particles.length - 1; i >= 0; i--) {
             if (this.particles[i].update(dt)) {
                 this.particles.splice(i, 1);
             }
         }
+
         if (this.updateMethod) {
             for (const p of this.particles) {
                 this.updateMethod(p);
@@ -207,6 +221,7 @@ export class Particle {
     public update(dt: number): boolean {
         // Life
         this.lifetime -= dt;
+
         if (this.lifetime <= 0) {
             // Tell parent that it may eliminate this particle
             return true;
@@ -217,6 +232,7 @@ export class Particle {
         // Gravity
         this.vx += this.emitter.gravity.x * dt;
         this.vy += this.emitter.gravity.y * dt;
+
         if (this.emitter.breakFactor !== 1) {
             const factor = this.emitter.breakFactor ** dt;
             this.vx *= factor;
@@ -235,9 +251,11 @@ export class Particle {
         ctx.save();
         ctx.globalAlpha = this.alpha * this.emitter.alphaCurve.get(this.progress);
         ctx.translate(this.x, -this.y);
+
         if (this.angle) {
             ctx.rotate(this.angle);
         }
+
         if (this.imageOrColor instanceof Object) {
             // Image
             const img = this.imageOrColor;
@@ -249,12 +267,14 @@ export class Particle {
             ctx.fillStyle = (this.imageOrColor as string);
             ctx.fillRect(-this.halfSize, -this.halfSize, this.size, this.size);
         }
+
         ctx.restore();
     }
 }
 
 export class ValueCurve {
     private mapping: number[] = [];
+
     constructor(private readonly func: (p: number) => number, private readonly steps = 1023) {
         for (let i = 0; i <= steps; i++) {
             this.mapping[i] = func(i / steps);
@@ -286,6 +306,7 @@ export class ValueCurve {
 function trapezeFunction(v: number, v1: number = v): ((p: number) => number) {
     return (p: number) => p < v ? p / v : p > 1 - v1 ? (1 - p) / v1 : 1
 }
+
 export const valueCurves = {
     constant: new ValueCurve((p) => 1, 1), // always 1
     linear: new ValueCurve((p) => p), // linear 0 to 1

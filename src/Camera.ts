@@ -1,9 +1,9 @@
-import { Vector2, clamp, shiftValue, rnd, isDev } from './util';
-import { ValueCurve, valueCurves } from './Particles';
-import { Fire } from './Fire';
-import { GameScene } from "./scenes/GameScene";
 import { Bounds } from './Entity';
+import { clamp, isDev, rnd, shiftValue, Vector2 } from './util';
+import { Fire } from './Fire';
+import { GameScene } from './scenes/GameScene';
 import { RenderingLayer, RenderingType } from './Renderer';
+import { ValueCurve, valueCurves } from './Particles';
 
 export interface camFocus {
     x: number;
@@ -47,53 +47,62 @@ export class Camera {
     private currentBarHeight = 0;
     private bounds?: Bounds;
 
-    constructor(protected scene: GameScene, private target: Vector2, interpolationTime = 0.5, private barHeight = 0.1) {
+    constructor(
+        protected scene: GameScene, private target: Vector2, interpolationTime = 0.5,
+        private barHeight = 0.1
+    ) {
         if (interpolationTime > 1) {
             throw new Error("Camera interpolation time may not exceed 1");
         }
+
         this.interpolationTime = interpolationTime / 2;
+
         if (isDev()) {
-            console.log("Dev mode, press TAB to zoom out & click somewhere to teleport there");
+            console.log("Dev mode, press “Tab” to zoom out & click somewhere to teleport there.");
             document.addEventListener("keydown", this.handleKeyDown.bind(this));
             document.addEventListener("keyup", this.handleKeyUp.bind(this));
             this.scene.game.canvas.addEventListener("click", this.handleClick.bind(this));
         }
+
         this.currentBarTarget = 0;
         this.currentBarHeight = 0;
     }
 
-    public setBounds (bounds: Bounds | undefined) {
+    public setBounds(bounds: Bounds | undefined): void {
         this.bounds = bounds;
     }
 
-    private handleKeyDown(e: KeyboardEvent) {
+    private handleKeyDown(e: KeyboardEvent): void {
         if (e.key === "Tab") {
             if (!e.repeat) {
                 this.zoomingOut = true;
             }
+
             e.stopPropagation();
             e.preventDefault();
         }
     }
 
-    private handleKeyUp(e: KeyboardEvent) {
-        if (e.key === "Tab") {
+    private handleKeyUp(e: KeyboardEvent): void {
+        if (e.key === 'Tab') {
             this.zoomingOut = false;
             e.stopPropagation();
             e.preventDefault();
         }
     }
 
-    private handleClick(e: MouseEvent) {
+    private handleClick(e: MouseEvent): void {
         if (this.zoomingOut) {
             const rect = this.scene.game.canvas.getBoundingClientRect();
             const cx = e.clientX - rect.x, cy = e.clientY - rect.y;
             const px = cx / rect.width, py = cy / rect.height;
             const worldRect = this.getVisibleRect();
             const tx = worldRect.x + px * worldRect.width, ty = worldRect.y + (1 - py) * worldRect.height;
+
             // Teleport player
             this.scene.player.x = tx;
             this.scene.player.y = ty;
+
             this.scene.player.setVelocity(0, 0);
             this.zoomingOut = false;
         }
@@ -103,6 +112,7 @@ export class Camera {
         const cnv = this.scene.game.canvas;
         const cw = cnv.width, ch = cnv.height;
         const offx = cw / 2 / this.zoom, offy = ch / 2 / this.zoom;
+
         return {
             x: x - offx,
             y: y - offy,
@@ -113,15 +123,20 @@ export class Camera {
 
     public isPointVisible(x: number, y: number, radius = 0): boolean {
         const visibleRect = this.getVisibleRect();
-        return x >= visibleRect.x - radius && y >= visibleRect.y - radius && x <= visibleRect.x +
-                visibleRect.width + radius && y <= visibleRect.y + visibleRect.height + radius;
+
+        return (
+            x >= visibleRect.x - radius
+            && y >= visibleRect.y - radius
+            && x <= visibleRect.x + visibleRect.width + radius
+            && y <= visibleRect.y + visibleRect.height + radius
+        );
     }
 
-    public setCinematicBar(target: number) {
+    public setCinematicBar(target: number): void {
         this.currentBarTarget = target;
     }
 
-    private getBaseCameraTarget () {
+    private getBaseCameraTarget() {
         // Base position always on target (player)
         let xTarget = this.target.x;
         let yTarget = this.target.y + 30;
@@ -155,7 +170,6 @@ export class Camera {
                 const visibleCenterY = (targetVisibleRect.y + targetVisibleRect.height) - targetVisibleRect.height / 2;
                 const boundCenterY = this.bounds.y - this.bounds.height / 2;
                 const diff = boundCenterY - visibleCenterY;
-                // console.log(diff);
                 yTarget += diff;
             } else if (overBounds.top) {
                 const diff = this.bounds.y - (targetVisibleRect.y + targetVisibleRect.height);
@@ -172,7 +186,7 @@ export class Camera {
         }
     }
 
-    public update(dt: number, time: number) {
+    public update(dt: number, time: number): void {
         this.time = time;
 
         // Base position always on target (player)
@@ -181,15 +195,18 @@ export class Camera {
         this.y = baseCamTarget.y;
 
         // Cam Shake during apocalypse
-        if (this.scene.fire.angry || this.scene.apocalypse) {
+        if (this.scene.fire.isAngry() || this.scene.apocalypse) {
             this.applyApocalypticShake(this.scene.fire);
         }
+
         this.zoom = this.zoomingOut ? 0.2 : 1;
         this.rotation = 0;
+
         // On top of that, apply cam focus(es)
         for (const focus of this.focuses) {
             this.updateAndApplyFocus(focus);
         }
+
         // Drop any focus that is done
         this.focuses = this.focuses.filter(f => !f.dead);
         // Update bar target towards goal
@@ -198,12 +215,14 @@ export class Camera {
         this.currentBarTarget = 0;
     }
 
-    private applyApocalypticShake(shakeSource: Fire) {
+    private applyApocalypticShake(shakeSource: Fire): void {
         const dx = this.x - shakeSource.x, dy = this.y - shakeSource.y;
         const dis = Math.sqrt(dx * dx + dy * dy);
         const maxDis = 200;
+
         if (dis < maxDis) {
             const intensity = (shakeSource.intensity - 5) / 15;
+
             if (intensity > 0) {
                 const shake = 5 * intensity * (1 - dis / maxDis) * (this.scene.player.playerConversation ? 0.5 : 1);
                 this.x += rnd(-1, 1) * shake;
@@ -234,8 +253,10 @@ export class Camera {
         ctx.translate(-this.x, this.y);
     }
 
-    public focusOn(duration: number, x: number, y: number, zoom = 1, rotation = 0,
-            curve = valueCurves.cos(this.interpolationTime)): Promise<void> {
+    public focusOn(
+        duration: number, x: number, y: number, zoom = 1, rotation = 0,
+        curve = valueCurves.cos(this.interpolationTime)
+    ): Promise<void> {
         const focus: camFocus = {
             x,
             y,
@@ -249,25 +270,30 @@ export class Camera {
             force: 0,
             curve
         };
+
         this.focuses.push(focus);
+
         return new Promise((resolve, reject) => {
             focus.resolve = resolve;
             this.updateAndApplyFocus(focus);
         });
     }
 
-    public updateAndApplyFocus(focus: camFocus) {
+    public updateAndApplyFocus(focus: camFocus): void {
         focus.progress = clamp((this.time - focus.startTime) / focus.duration, 0, 1);
         focus.dead = (focus.progress >= 1);
+
         if (!focus.dead) {
             // Fade in and out of focus using force lerping from 0 to 1 and back to 0 over time
             const force = focus.force = focus.curve.get(focus.progress);
+
             // Apply to camera state
             const f1 = 1 - force;
             this.x = f1 * this.x + force * focus.x;
             this.y = f1 * this.y + force * focus.y;
             const originalSize = 1 / this.zoom, targetSize = 1 / focus.zoom;
             const currentSize = f1 * originalSize + force * targetSize;
+
             this.zoom = 1 / currentSize;
             this.rotation = f1 * this.rotation + force * focus.rotation;
         } else {
@@ -280,13 +306,14 @@ export class Camera {
 
     public addCinematicBarsToRenderer(force = this.getFocusForce()): void {
         force = Math.max(force, this.getFocusForce(), this.currentBarHeight);
+
         this.scene.renderer.add({
             type: RenderingType.BLACK_BARS,
             layer: RenderingLayer.BLACK_BARS,
             color: "black",
             height: this.barHeight,
             force
-        })
+        });
     }
 
     public drawBars(ctx: CanvasRenderingContext2D, force = this.getFocusForce()): void {

@@ -1,11 +1,11 @@
-import { NPC } from './NPC';
-import { entity } from "./Entity";
+import { asset } from './Assets';
+import { BitmapFont } from './BitmapFont';
+import { DIALOG_FONT } from './constants';
+import dialogData from '../assets/dummy.texts.json';
+import { entity } from './Entity';
+import { GameScene } from './scenes/GameScene';
 import { Greeting } from './Greeting';
-import dialogData from "../assets/dummy.texts.json";
-import { asset } from "./Assets";
-import { BitmapFont } from "./BitmapFont";
-import { GameScene } from "./scenes/GameScene";
-import { DIALOG_FONT } from "./constants";
+import { NPC } from './NPC';
 
 @entity("tree")
 export class DummyNPC extends NPC {
@@ -17,18 +17,30 @@ export class DummyNPC extends NPC {
         this.greeting = new Greeting(this.scene, this, dialogData);
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
+    public draw(ctx: CanvasRenderingContext2D): void {
         ctx.save();
-        DummyNPC.font.drawText(ctx, "NPC", this.x, -this.y - this.height - 10, "black", 0.5);
-        ctx.strokeStyle = "black";
-        ctx.strokeRect(this.x - Math.round(this.width / 2) - 0.5, -this.y - this.height - 0.5, this.width, this.height);
+
+        DummyNPC.font.drawText(
+            ctx,
+            'NPC',
+            this.x, -this.y - this.height - 10,
+            'black',
+            0.5
+        );
+
+        ctx.strokeStyle = 'black';
+
+        ctx.strokeRect(
+            this.x - Math.round(this.width / 2) - 0.5, -this.y - this.height - 0.5,
+            this.width, this.height
+        );
+
         ctx.restore();
-        this.drawDialoguePrompt(ctx);
+        this.drawDialoguePrompt();
         this.drawGreeting(ctx);
     }
 
-    update(dt: number): void {
-        this.updateGreeting(dt);
+    public update(dt: number): void {
+        this.updateGreeting();
     }
-
 }

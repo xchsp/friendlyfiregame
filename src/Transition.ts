@@ -1,5 +1,5 @@
-import { clamp } from "./util";
-import { linear, Easing } from "./easings";
+import { clamp } from './util';
+import { Easing, linear } from './easings';
 
 export type TransitionType = "in" | "out";
 
@@ -38,7 +38,7 @@ export class Transition {
 
     public draw(ctx: CanvasRenderingContext2D, draw: () => void, width: number, height: number): void {}
 
-    public start(type: TransitionType): Promise<void> {
+    public async start(type: TransitionType): Promise<void> {
         if (this.promise == null) {
             this.type = type;
             this.elapsed = 0;

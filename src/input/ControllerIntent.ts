@@ -4,11 +4,10 @@
  * on a gamepad or a touch screen event.
  *
  * Right now, these events are stored in a bit mask to be extra efficient, …
- * … maybe that's not really necessary and should be changed to improve
+ * …maybe that's not really necessary and should be changed to improve
  * readability at some point…
  */
 export enum ControllerIntent {
-
     /** Used for unknown / unmapped buttons. */
     NONE = 0,
 
@@ -21,7 +20,7 @@ export enum ControllerIntent {
     /** Player movement: DROP (or: duck/crouch) */
     PLAYER_DROP = 0b0000_0000_0000_0000_1000,
 
-    /** Talk to NPCs, read Signs etc */
+    /** Talk to NPCs, read signs etc */
     PLAYER_INTERACT = 0b0000_0000_0000_0001_0000,
 
     /** Action, throw stuff */
@@ -57,5 +56,4 @@ export enum ControllerIntent {
     UNUSED_1 = 0b0010_0000_0000_0000_0000,
     UNUSED_2 = 0b0100_0000_0000_0000_0000,
     UNUSED_3 = 0b1000_0000_0000_0000_0000,
-
 }

@@ -1,10 +1,10 @@
-import { entity } from "./Entity";
-import { NPC } from './NPC';
 import { Aseprite } from './Aseprite';
-import { asset } from "./Assets";
-import { GameScene } from "./scenes/GameScene";
-import conversation from '../assets/dialog/mimic.dialog.json';
+import { asset } from './Assets';
 import { Conversation } from './Conversation';
+import conversation from '../assets/dialog/mimic.dialog.json';
+import { entity } from './Entity';
+import { GameScene } from './scenes/GameScene';
+import { NPC } from './NPC';
 import { Sound } from './Sound';
 
 enum MimicState { SLEEPING, OPEN_UP, IDLE }
@@ -27,7 +27,7 @@ export class Mimic extends NPC {
         this.animator.assignSprite(Mimic.sprite);
     }
 
-    public nextState (): void {
+    public nextState(): void {
         this.state++;
 
         if (this.state === MimicState.OPEN_UP) {
@@ -43,17 +43,27 @@ export class Mimic extends NPC {
         }
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
-        if (this.scene.showBounds) this.drawBounds();
-        switch (this.state) {
-            case MimicState.SLEEPING: this.animator.play("sleeping", this.direction); break;
-            case MimicState.OPEN_UP: this.animator.play("open", this.direction, { loop: false, callback: this.nextState.bind(this) }); break;
-            case MimicState.IDLE: this.animator.play("idle", this.direction); break;
+    public draw(ctx: CanvasRenderingContext2D): void {
+        if (this.scene.showBounds) {
+            this.drawBounds();
         }
+
+        switch (this.state) {
+            case MimicState.SLEEPING:
+                this.animator.play("sleeping", this.direction);
+                break;
+            case MimicState.OPEN_UP:
+                this.animator.play("open", this.direction, { loop: false, callback: this.nextState.bind(this) });
+                break;
+            case MimicState.IDLE:
+                this.animator.play("idle", this.direction);
+                break;
+        }
+
         this.speechBubble.draw(ctx);
     }
 
-    update(dt: number): void {
+    public update(dt: number): void {
         super.update(dt);
         this.speechBubble.update(this.x, this.y);
     }

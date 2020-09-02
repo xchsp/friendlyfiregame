@@ -1,13 +1,12 @@
-import { Scene } from "../Scene";
-import { FriendlyFire } from "../FriendlyFire";
-import { asset } from "../Assets";
-import { BitmapFont } from "../BitmapFont";
-import { ControllerEvent } from "../input/ControllerEvent";
-import { Quest } from '../Quests';
-import { CreditsScene } from './CreditsScene';
-import { Sound } from '../Sound';
+import { asset } from '../Assets';
+import { BitmapFont } from '../BitmapFont';
 import { ControllerFamily } from '../input/ControllerFamily';
-import { DIALOG_FONT } from "../constants";
+import { CreditsScene } from './CreditsScene';
+import { DIALOG_FONT } from '../constants';
+import { FriendlyFire } from '../FriendlyFire';
+import { Quest } from '../Quests';
+import { Scene } from '../Scene';
+import { Sound } from '../Sound';
 
 export class EndScene extends Scene<FriendlyFire> {
     @asset(DIALOG_FONT)
@@ -19,11 +18,15 @@ export class EndScene extends Scene<FriendlyFire> {
     @asset("sounds/ending/boom.mp3")
     private static boom: Sound;
 
-    private ending: Quest | undefined = this.game.campaign.quests.find(q => q.isFinished());
+    private ending: Quest | undefined;
     private time = 0;
     private boomPlayed = false;
     private subtitleDelay = 2;
     private inputDelay = 4;
+
+    public setup (): void {
+        this.ending = this.game.campaign.quests.find(q => q.isFinished());
+    }
 
     public activate(): void {
         this.input.onButtonDown.connect(this.handleButtonDown, this);
@@ -33,7 +36,7 @@ export class EndScene extends Scene<FriendlyFire> {
         this.input.onButtonDown.disconnect(this.handleButtonDown, this);
     }
 
-    private handleButtonDown(event: ControllerEvent): void {
+    private handleButtonDown(): void {
         if (this.time > this.inputDelay) {
             this.game.scenes.setScene(CreditsScene);
         }
@@ -50,20 +53,34 @@ export class EndScene extends Scene<FriendlyFire> {
     }
 
     public draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-        ctx.drawImage(EndScene.logo, width / 2 - EndScene.logo.width / 2, height / 2 - EndScene.logo.height / 2 - 15);
+        ctx.drawImage(
+            EndScene.logo,
+            width / 2 - EndScene.logo.width / 2, height / 2 - EndScene.logo.height / 2 - 15
+        );
 
         if (this.time > this.subtitleDelay) {
             const endingLabel = this.ending ? this.ending.title : 'Unknown [E]nding';
             const size = EndScene.font.measureText(endingLabel);
-            EndScene.font.drawText(ctx, endingLabel, width / 2 - size.width / 2, height / 2 - EndScene.logo.height / 2 + 20, "red");
-        }
-        // Inform the user, that it's possible to return to the title…
 
+            EndScene.font.drawText(
+                ctx,
+                endingLabel,
+                width / 2 - size.width / 2, height / 2 - EndScene.logo.height / 2 + 20,
+                "red"
+            );
+        }
+
+        // Inform the user, that it's possible to return to the title
         if (this.time > this.inputDelay) {
             const txt = `Press any ${this.input.currentControllerFamily === ControllerFamily.KEYBOARD ? "key" : "button"} to continue.`;
             const txtSize = EndScene.font.measureText(txt);
-            EndScene.font.drawText(ctx, txt, width / 2 - txtSize.width / 2 , height - txtSize.height - 15, "darkgrey");
+
+            EndScene.font.drawText(
+                ctx,
+                txt,
+                width / 2 - txtSize.width / 2 , height - txtSize.height - 15,
+                "darkgrey"
+            );
         }
     }
-
 }

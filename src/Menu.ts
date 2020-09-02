@@ -7,9 +7,9 @@ export enum MenuAlignment { LEFT, CENTER, RIGHT };
 
 /**
  * Simple MenuItem Class for usage in a MenuList.
- * Currently, each item is only rendered as simple text. The focused state is visualized via
- * an additional `►` character as prefix. The item instances don't need to be manually drawn,
- * since the MenuList class' draw method will take care of it
+ * Currently, each item is only rendered as simple text. The focused state is visualized via an
+ * additional `►` character as prefix. The item instances don't need to be manually drawn, since the
+ * MenuList class' draw method will take care of it.
  */
 export class MenuItem {
     public id: string;
@@ -24,7 +24,10 @@ export class MenuItem {
     @asset("sprites/menu_selector.png")
     private static selectorImage: HTMLImageElement;
 
-    public constructor(id: string, label: string, font: BitmapFont, color: "black" | "white", x: number, y: number, enabled = true) {
+    public constructor(
+        id: string, label: string, font: BitmapFont, color: "black" | "white", x: number, y: number,
+        enabled = true
+    ) {
         this.id = id;
         this.label = label;
         this.font = font;
@@ -51,6 +54,7 @@ export class MenuItem {
         const text = this.label;
         const width = this.font.measureText(text).width;
 
+
         if (align === MenuAlignment.CENTER) {
             x -= Math.round(width / 2);
         }
@@ -66,10 +70,11 @@ export class MenuItem {
 }
 
 /**
- * A simple Menu List that can hold MenuItems and navigate them in two directions via methods.
- * On each navigational change, the new Menu Item is focused. When calling the `executeAction` method a
- * signal is emitted containing the focused menu items id. Disabled Menu Items will be skipped automatically when navigating.
- * The draw method of the list instance has to be called to have all contianing buttons be drawn automatically.
+ * A simple MenuList that can hold MenuItems and navigate them in two directions via methods. On
+ * each navigational change, the new MenuItem is focused. When calling the `executeAction` method a
+ * signal is emitted containing the focused MenuItem's ID. Disabled MenuItems will be skipped
+ * automatically when navigating. The draw method of the list instance has to be called to have all
+ * containing buttons be drawn automatically.
  */
 export class MenuList {
     @asset("sounds/interface/click.mp3")
@@ -94,17 +99,24 @@ export class MenuList {
      * The first available menu item will be focused automatically
      * @param items
      */
-    public addItems(...items: MenuItem[]) {
+    public addItems(...items: MenuItem[]): void {
         this.items.push(...items);
         this.focusFirstItem();
     }
 
     /**
-     * Sets an arbitray number of menu items to the menu list and overrides
-     * any previously added items. The first available menu item will be focused automatically
+     * Clears all menu items from the menu instance
+     */
+    public reset(): void {
+        this.items = [];
+    }
+
+    /**
+     * Sets an arbitrary number of menu items to the menu list and overrides any previously added
+     * items. The first available menu item will be focused automatically.
      * @param items
      */
-    public setItems(...items: MenuItem[]) {
+    public setItems(...items: MenuItem[]): void {
         this.items = [...items];
         this.focusFirstItem();
     }
@@ -112,25 +124,29 @@ export class MenuList {
     /**
      * Finds and focuses the first available item if no item was focused before.
      */
-    private focusFirstItem (): void {
+    private focusFirstItem(): void {
         if (!this.getFocusedItem()) {
-            const index = this.items.findIndex(item => item.enabled)
+            const index = this.items.findIndex(item => item.enabled);
+
             if (index > -1) {
                 this.items[index].focused = true;
             }
         }
     }
 
-    private getFocusedItem (): MenuItem | undefined {
-        return this.items.find(item => item.focused)
+    private getFocusedItem(): MenuItem | undefined {
+        return this.items.find(item => item.focused);
     }
-    private getFocusedItemIndex (): number {
-        return this.items.findIndex(item => item.focused)
+
+    private getFocusedItemIndex(): number {
+        return this.items.findIndex(item => item.focused);
     }
-    private unfocusAllItems (): void {
+
+    private unfocusAllItems(): void {
         this.items.forEach(item => item.focused = false);
     }
-    private focusItem (item: MenuItem): void {
+
+    private focusItem(item: MenuItem): void {
         this.unfocusAllItems();
         item.focused = true;
     }
@@ -141,7 +157,7 @@ export class MenuList {
      * @param direction    - Direction in which the next item should be searched for.
      *                       Either 1 (forwards) or -1 (backwards)
      */
-    private findAndFocusNextItem(currentIndex: number, direction: -1 | 1) {
+    private findAndFocusNextItem(currentIndex: number, direction: -1 | 1): void {
         const min = direction > 0 ? 0 : (this.items.length - 1);
         const max = direction > 0 ? (this.items.length - 1) : 0;
         const nextIndex = (currentIndex === max) ? min : currentIndex + direction;
@@ -149,10 +165,11 @@ export class MenuList {
         const nextItem = this.items[nextIndex];
 
         if (nextItem.enabled) {
-            this.focusItem(this.items[nextIndex])
+            this.focusItem(this.items[nextIndex]);
         } else {
             this.findAndFocusNextItem(nextIndex, direction);
         }
+
         MenuList.click.stop();
         MenuList.click.play();
     }
@@ -161,18 +178,19 @@ export class MenuList {
      * Method to navigate the focus of the menu list to the next item
      */
     public next(): void {
-        this.findAndFocusNextItem(this.getFocusedItemIndex(), 1)
+        this.findAndFocusNextItem(this.getFocusedItemIndex(), 1);
     }
 
     /**
      * Method to navigate the focus of the menu list to the previous item
      */
     public prev(): void {
-        this.findAndFocusNextItem(this.getFocusedItemIndex(), -1)
+        this.findAndFocusNextItem(this.getFocusedItemIndex(), -1);
     }
 
     public executeAction(sound: Sound = MenuList.confirm): void {
         const focusedButton = this.getFocusedItem();
+
         if (focusedButton && focusedButton.enabled) {
             sound.stop();
             sound.play();
@@ -180,9 +198,9 @@ export class MenuList {
         }
     }
 
-    public draw(ctx: CanvasRenderingContext2D) {
+    public draw(ctx: CanvasRenderingContext2D): void {
         this.items.forEach(item => {
             item.draw(ctx, this.align);
-        })
+        });
     }
 }

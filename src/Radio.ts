@@ -1,7 +1,7 @@
-import { entity, Entity } from "./Entity";
 import { Aseprite } from './Aseprite';
-import { asset } from "./Assets";
-import { GameScene } from "./scenes/GameScene";
+import { asset } from './Assets';
+import { entity, Entity } from './Entity';
+import { GameScene } from './scenes/GameScene';
 import { RenderingLayer } from './Renderer';
 
 @entity("radio")
@@ -13,10 +13,13 @@ export class Radio extends Entity {
         super(scene, x, y, 24, 24, false);
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
+    public draw(): void {
         this.scene.renderer.addAseprite(Radio.sprite, "idle", this.x, this.y, RenderingLayer.ENTITIES)
-        if (this.scene.showBounds) this.drawBounds();
+
+        if (this.scene.showBounds) {
+            this.drawBounds();
+        }
     }
 
-    update(dt: number): void {}
+    public update(): void {}
 }

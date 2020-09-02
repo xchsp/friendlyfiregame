@@ -1,6 +1,7 @@
-import { ControllerFamily } from "./ControllerFamily";
-import { ControllerEventType } from "./ControllerEventType";
-import { ControllerIntent } from "./ControllerIntent";
+import { ControllerEventType } from './ControllerEventType';
+import { ControllerFamily } from './ControllerFamily';
+import { ControllerIntent } from './ControllerIntent';
+import { GamepadModel } from './GamepadModel';
 
 const controllerFamilySymbol = Symbol("controllerFamily");
 const intentsSymbol = Symbol("intent");
@@ -13,8 +14,12 @@ export class ControllerEvent extends Object {
     private [eventTypeSymbol]: ControllerEventType;
     private [repeatSymbol]: boolean;
 
-    constructor(controllerFamily: ControllerFamily, eventType: ControllerEventType, intents: ControllerIntent[], repeat: boolean = false) {
+    constructor(
+        controllerFamily: ControllerFamily, eventType: ControllerEventType,
+        intents: ControllerIntent[], repeat: boolean = false
+    ) {
         super();
+
         this[controllerFamilySymbol] = controllerFamily;
         this[intentsSymbol] = intents.reduce((prev, curr) => prev | curr);
         this[eventTypeSymbol] = eventType;
@@ -100,5 +105,17 @@ export class ControllerEvent extends Object {
     get isAbort(): boolean {
         return (this[intentsSymbol] & ControllerIntent.ABORT) === ControllerIntent.ABORT;
     }
+}
 
+const gamepadModelSymbol = Symbol("gamepadModel");
+
+export class GamepadControllerEvent extends ControllerEvent {
+    private [gamepadModelSymbol]: GamepadModel;
+    constructor(gamepadModel: GamepadModel, eventType: ControllerEventType, intents: ControllerIntent[], repeat: boolean = false) {
+        super(ControllerFamily.GAMEPAD, eventType, intents, repeat);
+        this[gamepadModelSymbol] = gamepadModel;
+    }
+    get getpadModel(): GamepadModel {
+        return this[gamepadModelSymbol];
+    }
 }

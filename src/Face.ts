@@ -1,8 +1,8 @@
+import { Aseprite } from './Aseprite';
+import { asset } from './Assets';
+import { GameScene } from './scenes/GameScene';
 import { NPC } from './NPC';
-import { Aseprite } from "./Aseprite";
-import { asset } from "./Assets";
-import { GameScene } from "./scenes/GameScene";
-import { RenderingType, RenderingLayer } from './Renderer';
+import { RenderingLayer, RenderingType } from './Renderer';
 
 export enum FaceModes {
     BLINK = "blink",
@@ -10,7 +10,8 @@ export enum FaceModes {
     ANGRY = "angry",
     BORED = "bored",
     AMUSED = "amused",
-    SAD = "sad"
+    SAD = "sad",
+    DISGUSTED = "disgusted"
 };
 
 export enum EyeType {
@@ -42,12 +43,13 @@ export class Face {
         private offY = 20
     ) {}
 
-    public setMode(mode: FaceModes) {
+    public setMode(mode: FaceModes): void {
         this.mode = mode;
     }
 
     public draw(ctx: CanvasRenderingContext2D): void {
         const sprite = Face.sprites[this.eyeType];
+
         this.scene.renderer.add({
             type: RenderingType.ASEPRITE,
             layer: RenderingLayer.ENTITIES,
@@ -69,12 +71,12 @@ export class Face {
         });
     }
 
-    public toggleDirection(direction = this.direction > 0 ? -1 : 1) {
+    public toggleDirection(direction = this.direction > 0 ? -1 : 1): void {
         if (direction !== this.direction) {
             this.direction = direction;
         }
     }
-    public setDirection(direction: number) {
+    public setDirection(direction: number): void {
         this.direction = direction;
     }
 }

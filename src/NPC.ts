@@ -1,11 +1,12 @@
-import { Face, FaceModes } from './Face';
-import { Greeting } from './Greeting';
-import { PhysicsEntity } from "./PhysicsEntity";
-import { SpeechBubble } from './SpeechBubble';
 import { Conversation } from './Conversation';
 import { DialoguePrompt } from './DialoguePrompt';
+import { Face, FaceModes } from './Face';
+import { Greeting } from './Greeting';
+import { PhysicsEntity } from './PhysicsEntity';
+import { sleep } from './util';
+import { SpeechBubble } from './SpeechBubble';
 
-// Seconds where NPC can't be talked to after an ended conversation
+// Seconds NPC can't be talked to after a conversation has ended
 const PAUSE_AFTER_CONVERSATION = 1.5;
 
 export abstract class NPC extends PhysicsEntity {
@@ -14,6 +15,7 @@ export abstract class NPC extends PhysicsEntity {
     public defaultFaceMode = FaceModes.NEUTRAL;
     public greeting: Greeting | null = null;
     public conversation: Conversation | null = null;
+    public thinkBubble: SpeechBubble | null = null;
     public speechBubble = new SpeechBubble(this.scene, this.x, this.y);
     public lookAtPlayer = true;
     public dialoguePrompt = new DialoguePrompt(this.scene, this.x, this.y);
@@ -34,6 +36,24 @@ export abstract class NPC extends PhysicsEntity {
         }
     }
 
+    public async think(message: string, time: number): Promise<void> {
+        if (this.thinkBubble) {
+            this.thinkBubble.hide();
+            this.thinkBubble = null;
+        }
+
+        const thinkBubble = this.thinkBubble = new SpeechBubble(this.scene, this.x, this.y);
+        thinkBubble.setMessage(message);
+        thinkBubble.show();
+
+        await sleep(time);
+
+        if (this.thinkBubble === thinkBubble) {
+            thinkBubble.hide();
+            this.thinkBubble = null;
+        }
+    }
+
     public hasMet(): boolean {
         return false;
     }
@@ -42,40 +62,47 @@ export abstract class NPC extends PhysicsEntity {
         this.met = true;
     }
 
-    public getInteractionText (): string {
+    public getInteractionText(): string {
         return "Talk";
     }
 
-    protected showDialoguePrompt (): boolean {
-        if (this.hasActiveConversation()) return false;
+    protected showDialoguePrompt(): boolean {
+        if (this.hasActiveConversation() || !this.scene.player.isControllable) {
+            return false;
+        }
+
         return true;
     }
 
-    protected drawDialoguePrompt (ctx: CanvasRenderingContext2D): void {
-        this.dialoguePrompt.draw(ctx);
+    protected drawDialoguePrompt(): void {
+        this.dialoguePrompt.draw();
     }
 
     protected drawGreeting(ctx: CanvasRenderingContext2D): void {
         this.greeting?.draw(ctx);
     }
 
-    protected updateGreeting(dt: number) {
-        this.greeting?.update(dt);
+    protected updateGreeting(): void {
+        this.greeting?.update();
     }
 
-    public registerEndedConversation() {
+    public registerEndedConversation(): void {
         this.lastEndedConversation = this.scene.gameTime;
     }
 
-    public isReadyForConversation() {
-        return (this.conversation && !this.scene.player.isCarrying(this) && this.scene.gameTime - this.lastEndedConversation > PAUSE_AFTER_CONVERSATION);
+    public isReadyForConversation(): boolean | null {
+        return (
+            this.conversation
+            && !this.scene.player.isCarrying(this)
+            && this.scene.gameTime - this.lastEndedConversation > PAUSE_AFTER_CONVERSATION
+        );
     }
 
     public hasActiveConversation(): boolean {
         return (this.scene.player.playerConversation !== null && this.scene.player.playerConversation.npc === this);
     }
 
-    public toggleDirection(direction = this.direction > 0 ? -1 : 1) {
+    public toggleDirection(direction = this.direction > 0 ? -1 : 1): void {
         if (direction !== this.direction) {
             this.direction = direction;
         }
@@ -86,6 +113,7 @@ export abstract class NPC extends PhysicsEntity {
             const dx = this.scene.player.x - this.x;
             this.toggleDirection((dx > 0) ? 1 : -1);
         }
+
         super.update(dt);
     }
 }

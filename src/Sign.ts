@@ -1,11 +1,11 @@
-import { entity } from "./Entity";
 import { Aseprite } from './Aseprite';
-import { asset } from "./Assets";
-import { GameScene } from "./scenes/GameScene";
-import { NPC } from './NPC';
-import { GameObjectProperties } from './MapInfo';
+import { asset } from './Assets';
 import { Conversation } from './Conversation';
-import { RenderingType, RenderingLayer } from './Renderer';
+import { entity } from './Entity';
+import { GameObjectProperties } from './MapInfo';
+import { GameScene } from './scenes/GameScene';
+import { NPC } from './NPC';
+import { RenderingLayer, RenderingType } from './Renderer';
 
 @entity("sign")
 export class Sign extends NPC {
@@ -18,27 +18,32 @@ export class Sign extends NPC {
         this.conversation = this.generateConversation(this.prepareContent(properties.content));
     }
 
-    private prepareContent (content?: string ): string[] {
-        if (!content) return ['The sign is empty.'];
+    private prepareContent(content?: string ): string[] {
+        if (!content) {
+            return ['The sign is empty.'];
+        }
+
         return content.split(":::");
     }
 
-    public getInteractionText (): string {
+    public getInteractionText(): string {
         return "Read sign";
     }
 
-    private generateConversation (lines: string[]): Conversation {
-        const json: Record<string, string[]> = { "entry": [] }
+    private generateConversation(lines: string[]): Conversation {
+        const json: Record<string, string[]> = { "entry": [] };
+
         lines.forEach((line, index) => {
             if (index === lines.length - 1) {
                 line += " @entry !end";
             }
             json.entry.push(line);
-        })
+        });
+
         return new Conversation(json, this);
     }
 
-    draw(ctx: CanvasRenderingContext2D): void {
+    public draw(ctx: CanvasRenderingContext2D): void {
         this.scene.renderer.add({
             type: RenderingType.ASEPRITE,
             layer: RenderingLayer.ENTITIES,
@@ -51,10 +56,13 @@ export class Sign extends NPC {
             animationTag: "idle",
             time: this.scene.gameTime * 1000
         })
-        
-        if (this.scene.showBounds) this.drawBounds();
+
+        if (this.scene.showBounds) {
+            this.drawBounds();
+        }
+
         this.speechBubble.draw(ctx);
     }
 
-    update(dt: number): void {}
+    public update(): void {}
 }

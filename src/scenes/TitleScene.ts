@@ -1,19 +1,19 @@
 import { Aseprite } from '../Aseprite';
-import { asset } from "../Assets";
-import { BitmapFont } from "../BitmapFont";
-import { ControllerEvent } from "../input/ControllerEvent";
-import { ControlsScene } from "./ControlsScene";
+import { asset } from '../Assets';
+import { BitmapFont } from '../BitmapFont';
+import { ControllerEvent } from '../input/ControllerEvent';
+import { ControlsScene } from './ControlsScene';
 import { CreditsScene } from './CreditsScene';
-import { CurtainTransition } from "../transitions/CurtainTransition";
-import { DIALOG_FONT } from "../constants";
-import { easeInSine } from "../easings";
-import { FadeTransition } from "../transitions/FadeTransition";
-import { FriendlyFire } from "../FriendlyFire";
-import { GameScene } from "./GameScene";
-import { isElectron } from "../util";
+import { CurtainTransition } from '../transitions/CurtainTransition';
+import { DIALOG_FONT } from '../constants';
+import { easeInSine } from '../easings';
+import { FadeTransition } from '../transitions/FadeTransition';
+import { FriendlyFire } from '../FriendlyFire';
+import { isElectron } from '../util';
 import { MenuAlignment, MenuItem, MenuList } from '../Menu';
-import { Scene } from "../Scene";
+import { Scene } from '../Scene';
 import { Sound } from '../Sound';
+import { CharacterSelectionScene } from './CharacterSelectionScene';
 
 type MainMenuParams = {
     label: string;
@@ -36,7 +36,7 @@ const MenuLabels: Record<MenuItemKey, MainMenuParams> = {
 
 export class TitleScene extends Scene<FriendlyFire> {
     @asset("music/cerulean-expanse.ogg")
-    private static music: Sound;
+    public static music: Sound;
 
     @asset("images/title/layer1.aseprite.json")
     private static titleLayer1: Aseprite;
@@ -75,6 +75,7 @@ export class TitleScene extends Scene<FriendlyFire> {
         x: this.game.width / 2 - TitleScene.logoImage.width / 2,
         y: 60
     }
+
     private titleLayer1Position = { x: 0, y: 70 }
     private titleLayer2Position = { x: 0, y: 163 }
     private titleLayer3Position = { x: 0, y: -125 }
@@ -92,11 +93,18 @@ export class TitleScene extends Scene<FriendlyFire> {
         this.logoAlphaProgress = 0;
         this.inTransition = new FadeTransition();
         this.outTransition = new CurtainTransition({ easing: easeInSine });
+        this.menu.reset();
 
         Object.values(MenuItemKey).forEach((key, index) => {
             if (!MenuLabels[key].electronOnly || (isElectron() || window.opener)) {
                 this.menu.addItems(
-                    new MenuItem(key, MenuLabels[key].label, TitleScene.font, "white", this.menuBasePosition.x, this.menuBasePosition.y + this.menuBasePosition.gap * index)
+                    new MenuItem(
+                        key,
+                        MenuLabels[key].label,
+                        TitleScene.font,
+                        "white",
+                        this.menuBasePosition.x, this.menuBasePosition.y + this.menuBasePosition.gap * index
+                    )
                 );
             }
         });
@@ -111,11 +119,12 @@ export class TitleScene extends Scene<FriendlyFire> {
         this.logoAlphaProgress = 1;
     }
 
-    public handleMenuAction (buttonId: string) {
+    public handleMenuAction(buttonId: string): void {
         switch(buttonId) {
             case MenuItemKey.START:
-                this.stopMusicTrack();
-                this.game.scenes.setScene(GameScene);
+                // this.stopMusicTrack();
+                this.game.scenes.pushScene(CharacterSelectionScene);
+                // this.game.scenes.setScene(GameScene);
                 break;
             case MenuItemKey.CONTROLS:
                 this.game.scenes.pushScene(ControlsScene);
@@ -158,7 +167,7 @@ export class TitleScene extends Scene<FriendlyFire> {
 
     }
 
-    public update(dt: number) {
+    public update(dt: number): void {
         this.time += dt;
 
         if (this.time < this.animationDuration && !this.animationIsDone()) {
@@ -169,32 +178,47 @@ export class TitleScene extends Scene<FriendlyFire> {
         }
     }
 
-    public draw(ctx: CanvasRenderingContext2D, width: number, height: number) {
+    public draw(ctx: CanvasRenderingContext2D, width: number, height: number): void {
         ctx.save();
         ctx.beginPath();
 
         const layer3OffY = (1 - this.animationProgress) * 100;
-        TitleScene.titleLayer3.drawTag(ctx, "idle", this.titleLayer3Position.x, this.titleLayer3Position.y + layer3OffY, this.time * 1000);
+
+        TitleScene.titleLayer3.drawTag(
+            ctx, "idle", this.titleLayer3Position.x, this.titleLayer3Position.y + layer3OffY, this.time * 1000
+        );
 
         const layer2OffY = (1 - this.animationProgress) * 200;
-        TitleScene.titleLayer2.drawTag(ctx, "idle", this.titleLayer2Position.x, this.titleLayer2Position.y + layer2OffY, this.time * 1000);
+
+        TitleScene.titleLayer2.drawTag(
+            ctx, "idle", this.titleLayer2Position.x, this.titleLayer2Position.y + layer2OffY, this.time * 1000
+        );
 
         const islandOffY = (1 - this.animationProgress) * 250;
+
         TitleScene.titleIsland1.drawTag(ctx, "idle", 90, 168 + islandOffY, this.time * 1000);
         TitleScene.titleIsland2.drawTag(ctx, "idle", 323, 178 + islandOffY, this.time * 1000);
 
         const personOff = (1 - this.animationProgress) * 330;
+
         TitleScene.person.drawTag(ctx, "idle", 22, 155 + personOff, this.time * 1000);
 
         const layer1OffY = (1 - this.animationProgress) * 300;
-        TitleScene.titleLayer1.drawTag(ctx, "idle", this.titleLayer1Position.x, this.titleLayer1Position.y + layer1OffY, this.time * 1000);
+
+        TitleScene.titleLayer1.drawTag(
+            ctx, "idle", this.titleLayer1Position.x, this.titleLayer1Position.y + layer1OffY, this.time * 1000
+        );
 
         ctx.globalAlpha = Math.max(this.logoAlphaProgress, 0);
         const menuOffY = (1 - this.animationProgress) * 150;
         ctx.drawImage(TitleScene.logoImage, this.titleBasePosition.x, this.titleBasePosition.y + menuOffY);
-        TitleScene.flameicon.drawTag(ctx, "idle", this.titleBasePosition.x + 147, this.titleBasePosition.y - 10 + menuOffY, this.time * 1000);
+
+        TitleScene.flameicon.drawTag(
+            ctx, "idle", this.titleBasePosition.x + 147, this.titleBasePosition.y - 10 + menuOffY, this.time * 1000
+        );
 
         ctx.restore();
+
         if (this.animationIsDone()) {
             this.menu.draw(ctx);
         }

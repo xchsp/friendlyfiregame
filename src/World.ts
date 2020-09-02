@@ -1,11 +1,11 @@
-import { getImageData } from "./graphics";
-import { ParticleEmitter, valueCurves, Particles } from "./Particles";
-import { rnd, rndInt, boundsFromMapObject } from "./util";
-import { asset } from "./Assets";
-import { GameScene, GameObject, isCollidableGameObject } from "./scenes/GameScene";
-import { Entity, Bounds } from './Entity';
+import { asset } from './Assets';
+import { Bounds, Entity } from './Entity';
+import { boundsFromMapObject, rnd, rndInt } from './util';
+import { GameObject, GameScene, isCollidableGameObject } from './scenes/GameScene';
 import { GameObjectInfo } from './MapInfo';
-import { RenderingType, RenderingLayer } from './Renderer';
+import { getImageData } from './graphics';
+import { ParticleEmitter, Particles, valueCurves } from './Particles';
+import { RenderingLayer, RenderingType } from './Renderer';
 
 export enum Environment {
     AIR = 0,
@@ -23,7 +23,9 @@ export class World implements GameObject {
     @asset("maps/level.png")
     private static foreground: HTMLImageElement;
 
-    @asset("maps/level_collision.png", { map: (image: HTMLImageElement) => new Uint32Array(getImageData(image).data.buffer) })
+    @asset("maps/level_collision.png", {
+        map: (image: HTMLImageElement) => new Uint32Array(getImageData(image).data.buffer)
+    })
     private static collisionMap: Uint32Array;
 
     @asset([
@@ -43,8 +45,13 @@ export class World implements GameObject {
     public constructor(scene: GameScene) {
         this.scene = scene;
 
-        const rainSpawnPosition = this.scene.pointsOfInterest.find(o => o.name === 'rain_spawn_position');
-        if (!rainSpawnPosition) throw new Error (`Missing 'rain_spawn_position' point in map data to place rain emitter`);
+        const rainSpawnPosition = this.scene.pointsOfInterest.find(
+            o => o.name === 'rain_spawn_position'
+        );
+
+        if (!rainSpawnPosition) {
+            throw new Error (`Missing 'rain_spawn_position' point in map data to place rain emitter`);
+        }
 
         this.rainEmitter = this.scene.particles.createEmitter({
             position: {x: rainSpawnPosition.x, y: rainSpawnPosition.y},
@@ -67,7 +74,7 @@ export class World implements GameObject {
         return World.foreground.height;
     }
 
-    public update(dt: number) {
+    public update(): void {
         if (this.raining) {
             this.rainEmitter.emit(rndInt(1, 4));
         }
@@ -84,11 +91,12 @@ export class World implements GameObject {
             translation: { x: camX, y: -camY },
             position: { x: -camX, y: -this.getHeight() + camY },
             asset: World.foreground
-        })
+        });
 
         for (const background of World.backgrounds) {
             const bgX = this.getWidth() / background.width;
             const bgY = this.getHeight() / background.height;
+
             this.scene.renderer.add({
                 type: RenderingType.DRAW_IMAGE,
                 layer: RenderingLayer.TILEMAP_BACKGROUND,
@@ -98,15 +106,17 @@ export class World implements GameObject {
                     y: (-this.getHeight() + camY) / bgY
                 },
                 asset: background
-            })
+            });
         }
     }
 
     public getEnvironment(x: number, y: number): Environment {
         const index = (this.getHeight() - 1 - Math.round(y)) * this.getWidth() + Math.round(x);
+
         if (index < 0 || index >= World.collisionMap.length) {
             return Environment.AIR;
         }
+
         return World.collisionMap[index];
     }
 
@@ -115,13 +125,20 @@ export class World implements GameObject {
      *
      * @param x - X position within the world.
      * @param y - Y position within the world.
-     * @return 0 if no collision. Anything else is a specific collision type (Actually an RGBA color which has
-     *         specific meaning which isn't defined yet).
+     * @return 0 if no collision. Anything else is a specific collision type (actually an RGBA color
+     *         which has specific meaning which isn't defined yet).
      */
-    public collidesWith(x: number, y: number, ignoreObjects: GameObject[] = [], ignore: Environment[] = []): number {
+    public collidesWith(
+        x: number, y: number, ignoreObjects: GameObject[] = [], ignore: Environment[] = []
+    ): number {
         for (const gameObject of this.scene.gameObjects) {
-            if (gameObject !== this && !ignoreObjects.includes(gameObject) && isCollidableGameObject(gameObject)) {
+            if (
+                gameObject !== this
+                && !ignoreObjects.includes(gameObject)
+                && isCollidableGameObject(gameObject)
+            ) {
                 const environment = gameObject.collidesWith(x, y);
+
                 if (environment !== Environment.AIR && !ignore.includes(environment) ) {
                     return environment;
                 }
@@ -129,34 +146,58 @@ export class World implements GameObject {
         }
 
         const index = (this.getHeight() - 1 - Math.round(y)) * this.getWidth() + Math.round(x);
+
         if (index < 0 || index >= World.collisionMap.length) {
             return 0;
         }
+
         const environment = this.getEnvironment(x, y);
-        if ((!validEnvironments.includes(environment)) || (ignore && ignore.includes(environment))) {
+
+        if (
+            !validEnvironments.includes(environment)
+            || (ignore && ignore.includes(environment))
+        ) {
             return Environment.AIR;
         }
+
         return World.collisionMap[index];
     }
 
     /**
-     * Checks if a specific entity (`sourceEntity`) collides with either of of the entities in the gameObjects array
-     * of the GameScene and returns all entities that currently collide. `Particles` are taken out of this check automatically.
+     * Checks if a specific entity (`sourceEntity`) collides with either of of the entities in the
+     * gameObjects array of the GameScene and returns all entities that currently collide.
+     * `Particles` are taken out of this check automatically.
+     *
      * @param sourceEntity    - The entity to be checked against the other entities
-     * @param margin          - Optional margin added to the bounding boxes of the entities to extend collision radius
+     * @param margin          - Optional margin added to the bounding boxes of the entities to
+     *                          extend collision radius
      * @param ignoreEntities  - Array of entities to be ignored with this check
-     * @return                - An array containing all entities that collide with the source entity.
+     * @return                - An array containing all entities that collide with the source
+     *                          entity.
      */
-    public getEntityCollisions (sourceEntity: Entity, margin = 0, ignoreEntities: Entity[] = []): Entity[] {
+    public getEntityCollisions(
+        sourceEntity: Entity, margin = 0, ignoreEntities: Entity[] = []
+    ): Entity[] {
         const collidesWith: Entity[] = [];
+
         for (const gameObject of this.scene.gameObjects) {
-            if (gameObject !== sourceEntity && !(gameObject instanceof Particles) && gameObject instanceof Entity && gameObject.isTrigger && !ignoreEntities.includes(gameObject)) {
-                const colliding = this.boundingBoxesCollide(sourceEntity.getBounds(margin), gameObject.getBounds(margin));
+            if (
+                gameObject !== sourceEntity
+                && !(gameObject instanceof Particles)
+                && gameObject instanceof Entity
+                && gameObject.isTrigger
+                && !ignoreEntities.includes(gameObject)
+            ) {
+                const colliding = this.boundingBoxesCollide(
+                    sourceEntity.getBounds(margin), gameObject.getBounds(margin)
+                );
+
                 if (colliding) {
                     collidesWith.push(gameObject);
                 }
             }
         }
+
         return collidesWith;
     }
 
@@ -164,36 +205,51 @@ export class World implements GameObject {
      * Returns all triggers that do collide with the provided entity
      * @param sourceEntity Entity to check collisions against trigger boxes
      */
-    public getTriggerCollisions (sourceEntity: Entity): GameObjectInfo[] {
+    public getTriggerCollisions(sourceEntity: Entity): GameObjectInfo[] {
         const collidesWith: GameObjectInfo[] = [];
+
         for (const triggerObject of this.scene.triggerObjects) {
-            const colliding = this.boundingBoxesCollide(sourceEntity.getBounds(), boundsFromMapObject(triggerObject));
+            const colliding = this.boundingBoxesCollide(
+                sourceEntity.getBounds(), boundsFromMapObject(triggerObject)
+            );
+
             if (colliding) {
                 collidesWith.push(triggerObject);
             }
         }
+
         return collidesWith;
     }
 
-    public getGateCollisions (sourceEntity: Entity): GameObjectInfo[] {
+    public getGateCollisions(sourceEntity: Entity): GameObjectInfo[] {
         const collidesWith: GameObjectInfo[] = [];
+
         for (const gateObject of this.scene.gateObjects) {
-            const colliding = this.boundingBoxesCollide(sourceEntity.getBounds(), boundsFromMapObject(gateObject, 0));
+            const colliding = this.boundingBoxesCollide(
+                sourceEntity.getBounds(), boundsFromMapObject(gateObject, 0)
+            );
+
             if (colliding) {
                 collidesWith.push(gateObject);
             }
         }
+
         return collidesWith;
     }
 
-    public getCameraBounds (sourceEntity: Entity): GameObjectInfo[] {
+    public getCameraBounds(sourceEntity: Entity): GameObjectInfo[] {
         const collidesWith: GameObjectInfo[] = [];
+
         for (const triggerObject of this.scene.boundObjects) {
-            const colliding = this.boundingBoxesCollide(sourceEntity.getBounds(), boundsFromMapObject(triggerObject));
+            const colliding = this.boundingBoxesCollide(
+                sourceEntity.getBounds(), boundsFromMapObject(triggerObject)
+            );
+
             if (colliding) {
                 collidesWith.push(triggerObject);
             }
         }
+
         return collidesWith;
     }
 
@@ -203,7 +259,7 @@ export class World implements GameObject {
      * @param box2 second bounding box
      * @return `true` when the bounding boxes are touching, `false` if not.
      */
-    private boundingBoxesCollide (box1: Bounds, box2: Bounds): boolean {
+    private boundingBoxesCollide(box1: Bounds, box2: Bounds): boolean {
         return !(
             ((box1.y - box1.height) > (box2.y)) ||
             (box1.y < (box2.y - box2.height)) ||
@@ -212,16 +268,23 @@ export class World implements GameObject {
         );
     }
 
-    public getObjectAt(x: number, y: number, ignoreObjects: GameObject[] = [], ignore: Environment[] = []):
-            GameObject | null {
+    public getObjectAt(
+        x: number, y: number, ignoreObjects: GameObject[] = [], ignore: Environment[] = []
+    ): GameObject | null {
         for (const gameObject of this.scene.gameObjects) {
-            if (gameObject !== this && !ignoreObjects.includes(gameObject) && isCollidableGameObject(gameObject)) {
+            if (
+                gameObject !== this
+                && !ignoreObjects.includes(gameObject)
+                && isCollidableGameObject(gameObject)
+            ) {
                 const environment = gameObject.collidesWith(x, y);
+
                 if (environment !== Environment.AIR && !ignore.includes(environment)) {
                     return gameObject;
                 }
             }
         }
+
         return null;
     }
 
@@ -233,14 +296,19 @@ export class World implements GameObject {
      * @param height - The height of the line to check
      * @return 0 if no collision. Type of first collision along the line otherwise.
      */
-    public collidesWithVerticalLine(x: number, y: number, height: number, ignoreObjects?: GameObject[],
-            ignore?: Environment[]): number {
+    public collidesWithVerticalLine(
+        x: number, y: number, height: number, ignoreObjects?: GameObject[], ignore?: Environment[]
+    ): number {
         for (let i = 0; i < height; i++) {
-            const collision = this.collidesWith(x, y - i, ignoreObjects, ignore);
+            const collision = this.collidesWith(
+                x, y - i, ignoreObjects, ignore
+            );
+
             if (collision) {
                 return collision;
             }
         }
+
         return 0;
     }
 
@@ -251,22 +319,27 @@ export class World implements GameObject {
      * @param y - Y coordinate of current position.
      * @return The Y coordinate of the ground below the given coordinate.
      */
-    public getGround(x: number, y: number, ignoreObjects?: GameObject[], ignore?: Environment[]): number {
-        while (y > 0 && !this.collidesWith(x, y, ignoreObjects, ignore)) {
+    public getGround(
+        x: number, y: number, ignoreObjects?: GameObject[], ignore?: Environment[]
+    ): number {
+        while (
+            y > 0 && !this.collidesWith(x, y, ignoreObjects, ignore)
+        ) {
             y--;
         }
+
         return y;
     }
 
-    public startRain() {
+    public startRain(): void {
         this.raining = true;
     }
 
-    public stopRain() {
+    public stopRain(): void {
         this.raining = false;
     }
 
-    public isRaining() {
+    public isRaining(): boolean {
         return this.raining;
     }
 }
